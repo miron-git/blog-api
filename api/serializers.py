@@ -2,6 +2,11 @@ from rest_framework import serializers
 
 from .models import Post, Comment, Group, Follow, User
 
+class UserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        fields = ('__all__')
+        model = User
 
 class PostSerializer(serializers.ModelSerializer):
     author = serializers.ReadOnlyField(source='author.username')

@@ -1,18 +1,30 @@
 from .models import Post, Comment, Group, Follow, User
-from .serializers import PostSerializer, CommentSerializer, GroupSerializer, FollowSerializer
+from .serializers import PostSerializer, CommentSerializer, GroupSerializer, FollowSerializer, UserSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from rest_framework.views import APIView
-from rest_framework import generics
+from rest_framework import generics, filters
 from rest_framework import viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+
+
+class UserList(APIView):
+    def get(self, request, username):
+        users = User.objects.filter(username=username)
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
 
 
 #Viewset
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
+    filter_backends = [filters.OrderingFilter, DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['text',] #фильтрация
+    ordering_fields = ['text',] #сортировка
+    search_fields = ['author',] #поиск
 
     def create(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -20,25 +32,6 @@ class PostViewSet(viewsets.ModelViewSet):
             serializer.save(author=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#низкоуровневый APIView
-class APIPost(APIView):
-    def get(self, request):
-        posts = Post.objects.all()
-        serializer = PostSerializer(posts, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def post(self, request):
-        serializer = PostSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(author=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#высокоуровневый
-class APIPostDetail(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Post.objects.all()
-    serializer_class = PostSerializer
 
 class APIComment(APIView):
     def get(self, request, id):
@@ -105,5 +98,25 @@ class APIFollow(APIView):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
+#тест
+#низкоуровневый APIView
+class APIPost(APIView):
+    def get(self, request):
+        posts = Post.objects.all()
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = PostSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(author=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+#высокоуровневый
+class APIPostDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+
 
 
